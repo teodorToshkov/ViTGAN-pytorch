@@ -62,7 +62,6 @@ python train.py \
 --num_heads 4 \
 --combine_patch_embeddings false \
 --batch_size 128 \
---device "cuda" \
 --discriminator_type "stylegan2" \
 --batch_size_history_discriminator false \
 --lr 0.002 \
