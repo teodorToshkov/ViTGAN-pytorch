@@ -1,5 +1,5 @@
 from stylegan2_pytorch import stylegan2_pytorch
-from models import DiffAugment
+from .diffaugment import DiffAugment
 
 # StyleGAN2 Discriminator
 

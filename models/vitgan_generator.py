@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 from einops import repeat
 
+from .multi_head import MultiHeadAttention
+
 # ViTGAN Generator
 
 class FullyConnectedLayer(nn.Module):
@@ -38,7 +40,6 @@ class FullyConnectedLayer(nn.Module):
                 b = b * self.bias_gain
 
         if self.activation == 'linear' and b is not None:
-            # print(b.shape, x.shape, w.t().shape)
             x = torch.addmm(b.unsqueeze(0), x, w.t())
         else:
             x = x.matmul(w.t())
@@ -257,7 +258,7 @@ class ResLinear(nn.Module):
 
 class ConLinear(nn.Module):
     def __init__(self, ch_in, ch_out, is_first=False, bias=True, **kwargs):
-        super(ConLinear, self).__init__()
+        super().__init__()
         self.conv = nn.Linear(ch_in, ch_out, bias=bias)
         if is_first:
             nn.init.uniform_(self.conv.weight, -np.sqrt(9 / ch_in), np.sqrt(9 / ch_in))
@@ -269,14 +270,14 @@ class ConLinear(nn.Module):
 
 class SinActivation(nn.Module):
     def __init__(self):
-        super(SinActivation, self).__init__()
+        super().__init__()
 
     def forward(self, x):
         return torch.sin(x)
 
 class LFF(nn.Module):
     def __init__(self, hidden_size, **kwargs):
-        super(LFF, self).__init__()
+        super().__init__()
         self.ffm = ConLinear(2, hidden_size, is_first=True)
         self.activation = SinActivation()
 
@@ -342,8 +343,6 @@ class Siren(nn.Module):
                                                style_size=style_size, bias=bias, **kwargs)
             else:
                 final_linear = ResLinear(hidden_size, out_features, style_size=style_size, bias=bias, **kwargs)
-            # FullyConnectedLayer(hidden_size, out_features, bias=False)
-            # final_linear = nn.Linear(hidden_size, out_features)
             
             with torch.no_grad():
                 if weight_modulation:
@@ -383,6 +382,7 @@ class GeneratorViT(nn.Module):
                 forward_drop_p=0.,
                 bias=False,
                 out_features=3,
+                out_patch_size=4,
                 weight_modulation=True,
                 siren_hidden_layers=1,
                 **kwargs):
@@ -397,6 +397,8 @@ class GeneratorViT(nn.Module):
         self.image_size = image_size
         self.combine_patch_embeddings = combine_patch_embeddings
         self.combined_embedding_size = combined_embedding_size
+        self.out_patch_size = out_patch_size
+        self.out_features = out_features
 
         self.pos_emb = nn.Parameter(torch.randn(num_patches, hidden_size))
         self.transformer_encoder = GeneratorTransformerEncoder(depth,
@@ -419,24 +421,22 @@ class GeneratorViT(nn.Module):
                            style_size=self.siren_in_features, hidden_size=self.hidden_size, bias=bias,
                            hidden_layers=siren_hidden_layers, outermost_linear=True, weight_modulation=weight_modulation, **kwargs)
 
-        self.num_patches_x = int(image_size//out_patch_size)
+        self.num_patches_x = int(image_size//self.out_patch_size)
 
     def fourier_input_mapping(self, x):
         return self.lff(x)
 
-    def fourier_pos_embedding(self):
+    def fourier_pos_embedding(self, device):
         # Create input pixel coordinates in the unit square
-        coords = np.linspace(-1, 1, out_patch_size, endpoint=True)
+        coords = np.linspace(-1, 1, self.out_patch_size, endpoint=True)
         pos = np.stack(np.meshgrid(coords, coords), -1)
-        pos = torch.tensor(pos, dtype=torch.float).to(device)
-        result = self.fourier_input_mapping(pos).reshape([out_patch_size**2, self.hidden_size])
+        pos = torch.tensor(pos, dtype=torch.float, device=device)
+        result = self.fourier_input_mapping(pos).reshape([self.out_patch_size**2, self.hidden_size])
         return result.to(device)
 
     def repeat_pos(self, hidden):
-        pos = self.fourier_pos_embedding()
-
+        pos = self.fourier_pos_embedding(hidden.device)
         result = repeat(pos, 'p h -> n p h', n = hidden.shape[0])
-        result = pos
         
         return result
 
@@ -457,8 +457,8 @@ class GeneratorViT(nn.Module):
 
         result = self.siren(pos, hidden)
 
-        model_output_1 = result.view([-1, self.num_patches_x, self.num_patches_x, out_patch_size, out_patch_size, out_features])
+        model_output_1 = result.view([-1, self.num_patches_x, self.num_patches_x, self.out_patch_size, self.out_patch_size, self.out_features])
         model_output_2 = model_output_1.permute([0, 1, 3, 2, 4, 5])
-        model_output = model_output_2.reshape([-1, image_size**2, out_features])
+        model_output = model_output_2.reshape([-1, self.image_size**2, self.out_features])
         
         return model_output

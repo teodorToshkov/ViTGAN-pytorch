@@ -3,7 +3,9 @@ from torch import nn
 from einops import repeat
 from einops.layers.torch import Rearrange
 
-from models import DiffAugment, MultiHeadAttention,  spectral_norm
+from .diffaugment import DiffAugment
+from .multi_head import MultiHeadAttention
+from .utils import spectral_norm
 
 # Discriminator
 

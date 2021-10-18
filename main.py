@@ -82,6 +82,8 @@ def get_parser():
                         help="lambda_lossD_history")
     parser.add_argument("--lambda_diversity_penalty", type=int, default=0,
                         help="lambda_diversity_penalty")
+    parser.add_argument("--device", type=str, default='cuda',
+                        help="device")
     return parser
 
 parser = get_parser()
@@ -91,7 +93,7 @@ image_size = params.image_size
 style_mlp_layers = params.style_mlp_layers
 patch_size = params.patch_size
 latent_dim = params.latent_dim # Size of z
-hidden_size = params.hidden_size
+hidden_size = params.hidden_features
 depth = params.depth
 num_heads = params.num_heads
 
@@ -224,10 +226,7 @@ def diversity_loss(images):
             img_b_l2 = torch.norm(img_b)
             img_a, img_b = img_a.flatten(), img_b.flatten()
 
-            # print(img_a_l2, img_b_l2, img_a.shape, img_b.shape)
-
             a_b_loss = scale_factor * (img_a.t() @ img_b) / (img_a_l2 * img_b_l2)
-            # print(a_b_loss)
             loss = loss + torch.sigmoid(a_b_loss)
             i += 1
     loss = loss.sum() / num_pairs
@@ -262,7 +261,10 @@ if generator_type == "vitgan":
                                 weight_modulation=weight_modulation,
                                 siren_hidden_layers=siren_hidden_layers,
                                 demodulation=demodulation,
+                                out_patch_size=out_patch_size,
                             ).to(device)
+    
+    print(Generator)
                             
     # use the modules apply function to recursively apply the initialization
     Generator.apply(init_normal)
@@ -276,6 +278,8 @@ if generator_type == "vitgan":
 
 elif generator_type == "cnn":
     cnn_generator = CNNGenerator(hidden_size=hidden_size, latent_dim=latent_dim).to(device)
+
+    print(cnn_generator)
 
     cnn_generator.apply(init_normal)
 
@@ -295,6 +299,8 @@ if discriminator_type == "vitgan":
                             forward_drop_p=dropout_p,
                     ).to(device)
             
+    print(Discriminator)
+
     Discriminator.apply(init_normal)
     
     if os.path.exists(f'{experiment_folder_name}/weights/discriminator.pth'):
@@ -304,6 +310,8 @@ if discriminator_type == "vitgan":
 
 elif discriminator_type == "cnn":
     cnn_discriminator = CNN().to(device)
+
+    print(cnn_discriminator)
 
     cnn_discriminator.apply(init_normal)
 
@@ -315,6 +323,8 @@ elif discriminator_type == "cnn":
 elif discriminator_type == "stylegan2":
     stylegan2_discriminator = StyleGanDiscriminator(image_size=32).to(device)
 
+    print(stylegan2_discriminator)
+    
     # stylegan2_discriminator.apply(init_normal)
 
     if os.path.exists(f'{experiment_folder_name}/weights/discriminator.pth'):
