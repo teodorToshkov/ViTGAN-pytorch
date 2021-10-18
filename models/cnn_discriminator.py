@@ -1,5 +1,5 @@
 from torch import nn
-from models import DiffAugment
+from .diffaugment import DiffAugment
 
 # CNN Discriminator
 

@@ -3,7 +3,7 @@ from torch import nn
 from einops import rearrange
 import torch.nn.functional as F
 
-from models import spectral_norm
+from .utils import spectral_norm
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, emb_size=384, num_heads=4, dropout=0, discriminator=False, **kwargs):
