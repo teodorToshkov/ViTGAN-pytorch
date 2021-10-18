@@ -3,11 +3,6 @@ A PyTorch implementation of [VITGAN: Training GANs with Vision Transformers](htt
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1kJJw6BYW01HgooCZ2zUDt54e1mXqITXH?usp=sharing)
 
-The implementation ***does not yet produce satisfactory results***.<br/>
-At the moment it suffers from **mode collapse**, which leads to an infinite cycle during training, hindering the learning process
-
-You are welcome to examine the code and suggest improvements!
-
 ## TODO:
 1.   [x] Use vectorized L2 distance in attention for **Discriminator**
 2.   [x] Overlapping Image Patches
@@ -17,6 +12,8 @@ You are welcome to examine the code and suggest improvements!
 5.   [x] ExponentialMovingAverage (EMA)
 6.   [x] Balanced Consistency Regularization (bCR)
 7.   [x] Improved Spectral Normalization (ISN)
+8.   [x] Equalized Learning Rate
+9.   [x] Weight Modulation
 
 ## Dependencies
 
@@ -25,12 +22,14 @@ You are welcome to examine the code and suggest improvements!
 - pytorch_ema
 - stylegan2-pytorch
 - tensorboard
+- wandb
 
 ``` bash
 pip install einops
 pip install git+https://github.com/fadel/pytorch_ema
 pip install stylegan2-pytorch
 pip install tensorboard
+pip install wandb
 ```
 
 ## **TLDR:**
@@ -92,7 +91,7 @@ The ViT part of the Generator differs from a standard Vision Transformer in the 
 SLN is the only place, where the seed is inputted to the network. <br/>
 SLN consists of a regular LayerNorm, the result of which is multiplied by ```gamma``` and added to ```beta```. <br/>
 Both ```gamma``` and ```beta``` are calculated using a fully connected layer, different for each place, SLN is applied. <br/>
-The input dimension to each of those fully connected is equal to ```hidden_dimension``` and the output dimension can be either equal to ```hidden_dimension``` or 1.
+The input dimension to each of those fully connected is equal to ```hidden_dimension``` and the output dimension is equal to ```hidden_dimension```.
 
 #### SIREN
 
@@ -105,11 +104,13 @@ The positional encoding, used in ViTGAN is the Fourier Position Encoding, the co
 
 In my implementation, the input to the SIREN is the sum of a patch embedding and a position embedding.
 
-***
+#### Weight Modulation
 
-After examining the Generator, I believe that it is implemented correctly.
+Weight Modulation usually consists of a modulation and a demodulation module. After testing the network, I concluded that **demodulation is not used in ViTGAN**.
 
-I found that there is no significant difference between using ```sln_paremeter_size=384``` and ```sln_paremeter_size=1```.
+My implementation of the weight modulation is heavily based on [CIPS](https://github.com/saic-mdal/CIPS/blob/main/model/blocks.py#L173). I have adjusted it to work for a fully-connected network, using a 1D convolution. The reason for using 1D convolution, instead of a linear layer is the groups term, which optimizes the performance by a factor of batch_size.
+
+Each SIREN layer consists of a sinsin activation, applied to a weight modulation layer. The size of the input, the hidden and the output layers in a SIREN network could vary. Thus, in case the input size differs from the size of the patch embedding, I define an additional fully-connected layer, which converts the patch embedding to the appropriate size.
 
 ### Discriminator
 
