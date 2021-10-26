@@ -133,7 +133,7 @@ class MappingNetwork(nn.Module):
 class FeedForwardBlock(nn.Sequential):
     def __init__(self, emb_size, expansion=4, drop_p=0., bias=False):
         super().__init__(
-            FullyConnectedLayer(expansion, emb_size * emb_size, activation='gelu', bias=False),
+            FullyConnectedLayer(emb_size, expansion * emb_size, activation='gelu', bias=False),
             nn.Dropout(drop_p),
             FullyConnectedLayer(expansion * emb_size, emb_size, bias=False),
         )
