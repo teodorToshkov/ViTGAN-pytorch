@@ -25,11 +25,7 @@ A PyTorch implementation of [VITGAN: Training GANs with Vision Transformers](htt
 - wandb
 
 ``` bash
-pip install einops
-pip install git+https://github.com/fadel/pytorch_ema
-pip install stylegan2-pytorch
-pip install tensorboard
-pip install wandb
+pip install einops git+https://github.com/fadel/pytorch_ema stylegan2-pytorch tensorboard wandb
 ```
 
 ## **TLDR:**
@@ -37,7 +33,7 @@ pip install wandb
 Train the model with the proposed parameters:
 
 ``` bash
-python train.py
+python main.py
 ```
 
 Tensorboard
@@ -51,24 +47,7 @@ tensorboard --logdir runs/
 The following parameters are the parameters, proposed in the paper for the CIFAR-10 dataset:
 
 ``` bash
-python train.py \
---image_size 32 \
---patch_size 4 \
---latent_dim 32 \
---hidden_features 384 \
---sln_paremeter_size 384 \
---depth 4 \
---num_heads 4 \
---combine_patch_embeddings false \
---batch_size 128 \
---discriminator_type "stylegan2" \
---batch_size_history_discriminator false \
---lr 0.002 \
---epochs 200 \
---lambda_bCR_real 10 \
---lambda_bCR_fake 10 \
---lambda_lossD_noise 0 \
---lambda_lossD_history 0 \
+python main.py
 ```
 
 ## Implementation Details
